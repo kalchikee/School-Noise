@@ -6,6 +6,9 @@
   <title>US School Noise Exposure &mdash; Highway Proximity Analysis</title>
   <meta name="description" content="National-scale analysis classifying every US public elementary school by modeled highway noise exposure using WHO cognitive impact thresholds." />
 
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
@@ -14,21 +17,25 @@
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
     :root {
-      --bg:       #0f172a;
-      --surface:  #1e293b;
-      --border:   #334155;
+      --bg:       #0b1120;
+      --surface:  #111827;
+      --surface2: #1a2234;
+      --border:   #1f2d42;
+      --border2:  #2a3a52;
       --text:     #e2e8f0;
-      --muted:    #94a3b8;
-      --dim:      #64748b;
+      --muted:    #8b9fc4;
+      --dim:      #4d6280;
       --accent:   #3b82f6;
-      --t1: #2ecc71;
-      --t2: #f1c40f;
-      --t3: #e67e22;
-      --t4: #e74c3c;
+      --accent2:  #60a5fa;
+      --t1: #22c55e;
+      --t2: #eab308;
+      --t3: #f97316;
+      --t4: #ef4444;
+      --sidebar-w: 288px;
     }
 
     body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
       height: 100dvh;
@@ -40,25 +47,54 @@
     /* ── Header ── */
     header {
       background: var(--surface);
-      border-bottom: 2px solid var(--border);
-      padding: 10px 18px;
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      height: 52px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-shrink: 0;
-      gap: 12px;
+      gap: 16px;
       z-index: 1000;
+      position: relative;
     }
-    .header-left h1 {
-      font-size: 1rem;
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent) 0%, #8b5cf6 50%, transparent 100%);
+      opacity: 0.7;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .header-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .header-text h1 {
+      font-size: 0.9rem;
       font-weight: 700;
       color: #f1f5f9;
-      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .header-left p {
-      font-size: 0.72rem;
+    .header-text p {
+      font-size: 0.68rem;
       color: var(--muted);
-      margin-top: 2px;
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .header-right {
       display: flex;
@@ -66,136 +102,199 @@
       flex-shrink: 0;
     }
     .btn {
-      background: var(--border);
-      color: var(--text);
-      border: none;
-      border-radius: 6px;
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
       padding: 5px 12px;
-      font-size: 0.78rem;
+      font-size: 0.75rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: all 0.15s;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
+      font-family: inherit;
     }
-    .btn:hover { background: #475569; }
-    .btn-accent { background: var(--accent); color: #fff; }
-    .btn-accent:hover { background: #2563eb; }
+    .btn:hover { background: var(--border2); color: var(--text); }
+    .btn svg { opacity: 0.7; }
 
     /* ── Layout ── */
     .layout {
       display: flex;
       flex: 1;
       overflow: hidden;
+      position: relative;
     }
 
     /* ── Sidebar ── */
     #sidebar {
-      width: 280px;
+      width: var(--sidebar-w);
       background: var(--surface);
       border-right: 1px solid var(--border);
       overflow-y: auto;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border2) transparent;
     }
-    #sidebar-inner { padding: 14px; }
+    #sidebar::-webkit-scrollbar { width: 4px; }
+    #sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    #sidebar-inner { padding: 16px 14px; display: flex; flex-direction: column; gap: 20px; }
 
-    .section { margin-bottom: 18px; }
+    .section {}
     .section-title {
-      font-size: 0.68rem;
+      font-size: 0.62rem;
       text-transform: uppercase;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.12em;
       color: var(--dim);
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
     }
 
     /* Legend */
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 9px;
-      padding: 5px 7px;
-      border-radius: 6px;
+      gap: 10px;
+      padding: 6px 8px;
+      border-radius: 7px;
       cursor: pointer;
-      transition: background 0.12s;
-      margin-bottom: 4px;
+      transition: background 0.12s, opacity 0.12s;
+      margin-bottom: 3px;
       user-select: none;
+      border: 1px solid transparent;
     }
-    .legend-item:hover { background: #263347; }
-    .legend-item.off { opacity: 0.3; }
+    .legend-item:hover { background: var(--surface2); border-color: var(--border); }
+    .legend-item.off { opacity: 0.28; }
     .legend-dot {
-      width: 12px; height: 12px;
+      width: 10px; height: 10px;
       border-radius: 50%;
       flex-shrink: 0;
-      border: 1.5px solid rgba(255,255,255,0.25);
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
     }
-    .legend-text { font-size: 0.8rem; flex: 1; }
+    .legend-text { font-size: 0.78rem; flex: 1; font-weight: 500; }
     .legend-count {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       color: var(--muted);
       background: var(--bg);
-      padding: 1px 6px;
+      padding: 1px 7px;
       border-radius: 10px;
       font-variant-numeric: tabular-nums;
+      font-weight: 600;
     }
+
+    /* Tier distribution bar */
+    #tier-bar-wrap { margin-top: 8px; }
+    #tier-bar {
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+      display: flex;
+      background: var(--bg);
+    }
+    .tier-bar-seg { height: 100%; transition: width 0.4s; }
+    .tier-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+    .tier-bar-lbl { font-size: 0.6rem; color: var(--dim); font-variant-numeric: tabular-nums; }
 
     /* Stats */
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
     .stat-card {
       background: var(--bg);
+      border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 9px;
+      padding: 10px 10px 8px;
       text-align: center;
+      transition: border-color 0.2s;
     }
-    .stat-val { font-size: 1.3rem; font-weight: 700; color: #f8fafc; line-height: 1.2; }
-    .stat-lbl { font-size: 0.66rem; color: var(--dim); margin-top: 2px; }
+    .stat-card:hover { border-color: var(--border2); }
+    .stat-val { font-size: 1.25rem; font-weight: 700; color: #f8fafc; line-height: 1.2; letter-spacing: -0.02em; }
+    .stat-lbl { font-size: 0.62rem; color: var(--dim); margin-top: 3px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
 
     /* Filters */
-    .filter-row { margin-top: 8px; }
+    .filter-row { margin-top: 10px; }
+    .filter-row:first-child { margin-top: 0; }
     .filter-label {
-      font-size: 0.76rem;
+      font-size: 0.73rem;
       color: var(--muted);
       display: flex;
       justify-content: space-between;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
+      font-weight: 500;
     }
-    .filter-label span { color: var(--text); font-weight: 600; }
-    select, input[type=range] {
+    .filter-label span { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+    select {
       width: 100%;
       background: var(--bg);
       color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5px 8px;
-      font-size: 0.8rem;
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
     }
+    select:focus { border-color: var(--accent); }
     input[type=range] {
+      width: 100%;
       padding: 2px 0;
       cursor: pointer;
       accent-color: var(--accent);
+      background: transparent;
     }
+    .reset-btn {
+      margin-top: 10px;
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--muted);
+      border-radius: 7px;
+      padding: 5px 0;
+      font-size: 0.73rem;
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .reset-btn:hover { background: var(--surface2); color: var(--text); }
 
     /* WHO ref */
-    .who-list { font-size: 0.76rem; color: var(--muted); line-height: 1.8; }
-    .who-list b { font-weight: 600; }
+    .who-list { font-size: 0.73rem; color: var(--muted); line-height: 1.9; }
+    .who-item { display: flex; align-items: baseline; gap: 7px; }
+    .who-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; position: relative; top: 0px; }
+    .who-cite { margin-top: 8px; font-size: 0.63rem; color: var(--dim); line-height: 1.5; padding-top: 8px; border-top: 1px solid var(--border); }
 
-    /* Data status banner */
-    #data-banner {
-      padding: 7px 12px;
-      font-size: 0.75rem;
-      text-align: center;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+    /* About */
+    .about-text { font-size: 0.73rem; color: var(--muted); line-height: 1.65; }
+    .about-text b { color: var(--text); font-weight: 600; }
+
+    /* Sources tag list */
+    .source-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .source-tag {
+      font-size: 0.63rem;
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      color: var(--dim);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-weight: 500;
     }
-    #data-banner.demo { background: #1d4ed8; }
-    #data-banner.real { background: #15803d; }
-    #data-banner a { color: #bfdbfe; }
 
     /* ── Map ── */
     #map { flex: 1; }
@@ -210,85 +309,136 @@
       align-items: center;
       justify-content: center;
       z-index: 9999;
+      gap: 0;
     }
-    .spinner {
-      width: 38px; height: 38px;
-      border: 4px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.75s linear infinite;
-      margin-bottom: 14px;
+    .loading-icon {
+      font-size: 2.4rem;
+      margin-bottom: 18px;
+      animation: pulse 2s ease-in-out infinite;
     }
-    #loading h2 { font-size: 1.1rem; margin-bottom: 6px; }
-    #loading p  { font-size: 0.82rem; color: var(--dim); }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%,100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+    #loading h2 { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; color: #f1f5f9; }
+    #loading p  { font-size: 0.78rem; color: var(--muted); margin-bottom: 20px; }
+    .loading-bar-bg {
+      width: 180px; height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .loading-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #8b5cf6);
+      border-radius: 2px;
+      animation: bar-anim 1.6s ease-in-out infinite;
+      transform-origin: left;
+    }
+    @keyframes bar-anim { 0% { width:0%; margin-left:0% } 50% { width:60%; margin-left:20% } 100% { width:0%; margin-left:100% } }
 
     /* Popup */
     .leaflet-popup-content-wrapper {
       background: var(--surface) !important;
       color: var(--text) !important;
-      border-radius: 10px !important;
-      border: 1px solid var(--border) !important;
-      box-shadow: 0 8px 28px rgba(0,0,0,0.55) !important;
-      min-width: 220px;
+      border-radius: 12px !important;
+      border: 1px solid var(--border2) !important;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.65) !important;
+      min-width: 240px;
     }
     .leaflet-popup-tip { background: var(--surface) !important; }
-    .leaflet-popup-content { margin: 12px 14px !important; }
-    .pu-name { font-weight: 700; font-size: 0.88rem; padding-bottom: 7px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
-    .pu-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 0.72rem;
+    .leaflet-popup-close-button { color: var(--muted) !important; top: 8px !important; right: 10px !important; font-size: 1.1rem !important; }
+    .leaflet-popup-content { margin: 14px 16px !important; }
+
+    .pu-name {
       font-weight: 700;
-      margin-bottom: 8px;
+      font-size: 0.85rem;
+      line-height: 1.3;
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+      color: #f1f5f9;
     }
-    .pu-row { display: flex; justify-content: space-between; font-size: 0.78rem; margin: 3px 0; gap: 12px; }
+    .pu-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.71rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .pu-badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    /* Noise meter */
+    .pu-meter { margin: 4px 0 10px; }
+    .pu-meter-label { font-size: 0.65rem; color: var(--muted); display: flex; justify-content: space-between; margin-bottom: 3px; }
+    .pu-meter-bg {
+      height: 5px;
+      background: var(--bg);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .pu-meter-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    .pu-row { display: flex; justify-content: space-between; font-size: 0.76rem; margin: 4px 0; gap: 12px; }
     .pu-key { color: var(--muted); }
-    .pu-val { font-weight: 600; }
+    .pu-val { font-weight: 600; color: #f1f5f9; }
 
     /* Sidebar toggle on small screens */
     #sidebar-toggle {
       display: none;
       position: absolute;
-      top: 60px;
-      left: 8px;
+      top: 10px;
+      left: 10px;
       z-index: 500;
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 10px;
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      padding: 7px 11px;
       cursor: pointer;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--text);
+      font-family: inherit;
+      font-weight: 500;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.4);
     }
     @media (max-width: 640px) {
-      #sidebar { position: absolute; left: -280px; top: 0; bottom: 0; z-index: 400; transition: left 0.2s; }
+      #sidebar { position: absolute; left: calc(-1 * var(--sidebar-w)); top: 0; bottom: 0; z-index: 400; transition: left 0.2s; box-shadow: 4px 0 20px rgba(0,0,0,0.5); }
       #sidebar.open { left: 0; }
       #sidebar-toggle { display: block; }
     }
+
+    /* Leaflet overrides */
+    .leaflet-control-zoom a {
+      background: var(--surface) !important;
+      color: var(--text) !important;
+      border-color: var(--border2) !important;
+    }
+    .leaflet-control-zoom a:hover { background: var(--surface2) !important; }
+    .leaflet-control-attribution { background: rgba(11,17,32,0.8) !important; color: var(--dim) !important; font-size: 0.6rem !important; }
+    .leaflet-control-attribution a { color: var(--muted) !important; }
   </style>
 </head>
 <body>
 
 <header>
   <div class="header-left">
-    <h1>US Elementary Schools &mdash; Highway Noise Exposure</h1>
-    <p>WHO cognitive impact thresholds &bull; BTS National Noise Map &bull; NCES EDGE Schools</p>
+    <div class="header-icon">&#127891;</div>
+    <div class="header-text">
+      <h1>US Schools &mdash; Highway Noise Exposure</h1>
+      <p>National analysis &bull; WHO cognitive thresholds &bull; NCES EDGE 2023&ndash;24</p>
+    </div>
   </div>
   <div class="header-right">
     <a class="btn" href="https://github.com/kalchikee/School-Noise" target="_blank" rel="noopener">
-      &#x2767; GitHub
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
     </a>
   </div>
 </header>
-
-<div id="data-banner" class="demo">
-  <span id="banner-text">
-    Demo mode &mdash; showing synthetic sample data.
-    To load real data, run the pipeline and place <code>schools_webmap.geojson</code> in <code>docs/data/</code>.
-  </span>
-</div>
 
 <div class="layout">
   <button id="sidebar-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776; Filters</button>
@@ -299,6 +449,15 @@
       <div class="section">
         <div class="section-title">Noise Exposure Tiers</div>
         <div id="legend"></div>
+        <div id="tier-bar-wrap">
+          <div id="tier-bar"></div>
+          <div class="tier-bar-labels">
+            <span class="tier-bar-lbl" id="tbl-t1">T1</span>
+            <span class="tier-bar-lbl" id="tbl-t2">T2</span>
+            <span class="tier-bar-lbl" id="tbl-t3">T3</span>
+            <span class="tier-bar-lbl" id="tbl-t4">T4</span>
+          </div>
+        </div>
       </div>
 
       <div class="section">
@@ -326,26 +485,30 @@
           </div>
           <input type="range" id="f-mx" min="50" max="2000" step="50" value="2000" />
         </div>
+        <button class="reset-btn" id="reset-btn">&#8634; Reset Filters</button>
       </div>
 
       <div class="section">
-        <div class="section-title">WHO Reference Thresholds</div>
+        <div class="section-title">WHO Thresholds</div>
         <div class="who-list">
-          <div>&#8226; <b style="color:var(--t1)">Below 50 dB</b> &mdash; Minimal risk</div>
-          <div>&#8226; <b style="color:var(--t2)">50&ndash;55 dB</b> &mdash; Elevated risk</div>
-          <div>&#8226; <b style="color:var(--t3)">55&ndash;65 dB</b> &mdash; Significant cognitive impact</div>
-          <div>&#8226; <b style="color:var(--t4)">Above 65 dB</b> &mdash; Severe exposure</div>
-          <div style="margin-top:6px;font-size:0.7rem">
-            WHO Environmental Noise Guidelines for the European Region (2018)
-          </div>
+          <div class="who-item"><div class="who-dot" style="background:var(--t1)"></div><div><b style="color:var(--t1)">Below 50 dB</b> &mdash; Minimal risk</div></div>
+          <div class="who-item"><div class="who-dot" style="background:var(--t2)"></div><div><b style="color:var(--t2)">50&ndash;55 dB</b> &mdash; Elevated risk</div></div>
+          <div class="who-item"><div class="who-dot" style="background:var(--t3)"></div><div><b style="color:var(--t3)">55&ndash;65 dB</b> &mdash; Significant cognitive impact</div></div>
+          <div class="who-item"><div class="who-dot" style="background:var(--t4)"></div><div><b style="color:var(--t4)">Above 65 dB</b> &mdash; Severe exposure</div></div>
+          <div class="who-cite">WHO Environmental Noise Guidelines for the European Region (2018). Chronic exposure &ge;55&nbsp;dB linked to impaired cognitive development and reduced reading comprehension in children.</div>
         </div>
       </div>
 
       <div class="section">
         <div class="section-title">About</div>
-        <div style="font-size:0.75rem;color:var(--muted);line-height:1.6">
-          Chronic exposure to traffic noise above 55&nbsp;dB is linked by the WHO to impaired cognitive development and reduced reading comprehension in children.
-          This project classifies every US public elementary school (~67,000) by modeled noise exposure and tests for disproportionate impact in low-income communities.
+        <div class="about-text">
+          This project classifies every US public elementary school (~67,000) by modeled highway noise exposure and tests for <b>disproportionate impact in low-income communities</b>. Noise levels are estimated using a physics-based ISO&nbsp;9613-2 attenuation model combined with locale-calibrated urban noise floors derived from NCES locale codes.
+        </div>
+        <div class="source-tags">
+          <span class="source-tag">NCES EDGE 2023&ndash;24</span>
+          <span class="source-tag">Census TIGER Roads</span>
+          <span class="source-tag">ISO 9613-2 Model</span>
+          <span class="source-tag">WHO 2018</span>
         </div>
       </div>
 
@@ -356,9 +519,10 @@
 </div>
 
 <div id="loading">
-  <div class="spinner"></div>
+  <div class="loading-icon">&#127891;</div>
   <h2>Loading School Data&hellip;</h2>
   <p id="load-msg">Fetching school noise database&hellip;</p>
+  <div class="loading-bar-bg"><div class="loading-bar-fill"></div></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -366,15 +530,14 @@
 <script>
 // ── Config ──────────────────────────────────────────────────────────────────
 const TIERS = [
-  { id:1, label:"Tier 1 \u2014 Minimal Risk",      color:"#2ecc71", css:"var(--t1)" },
-  { id:2, label:"Tier 2 \u2014 Elevated Risk",      color:"#f1c40f", css:"var(--t2)" },
-  { id:3, label:"Tier 3 \u2014 Significant Impact", color:"#e67e22", css:"var(--t3)" },
-  { id:4, label:"Tier 4 \u2014 Severe Exposure",    color:"#e74c3c", css:"var(--t4)" },
+  { id:1, label:"Tier 1 \u2014 Minimal Risk",      color:"#22c55e" },
+  { id:2, label:"Tier 2 \u2014 Elevated Risk",      color:"#eab308" },
+  { id:3, label:"Tier 3 \u2014 Significant Impact", color:"#f97316" },
+  { id:4, label:"Tier 4 \u2014 Severe Exposure",    color:"#ef4444" },
 ];
 const TM = {};
 TIERS.forEach(t => TM[t.id] = t);
 
-// Resolve GeoJSON path — works on GitHub Pages (relative to docs/) and locally
 const GEOJSON_URL = "data/schools_webmap.geojson";
 
 // ── Map ──────────────────────────────────────────────────────────────────────
@@ -394,18 +557,36 @@ const fmt = n => (n == null || isNaN(n)) ? "N/A" : Number(n).toLocaleString();
 const fmtDb = n => n != null ? Number(n).toFixed(1) + " dB" : "N/A";
 const fmtPct = n => n != null ? Number(n).toFixed(1) + "%" : "N/A";
 
+function clusterColor(c) {
+  const children = c.getAllChildMarkers();
+  const counts = {1:0,2:0,3:0,4:0};
+  children.forEach(m => { if (m.noiseT) counts[m.noiseT]++; });
+  for (let t = 4; t >= 1; t--) {
+    if (counts[t] > children.length * 0.25) return TM[t].color;
+  }
+  return TM[1].color;
+}
+
 function popup(p) {
   const t = TM[p.noise_tier] || TM[1];
   const name = p.SCHNAM || p.NAME || p.name || "Elementary School";
   const state = p.STABR || p.ST || p.STATE_ABBR || "";
+  const db = p.noise_db;
+  const meterPct = db != null ? Math.min(100, Math.max(0, (db - 28) / (82 - 28) * 100)) : 50;
   return `
     <div class="pu-name">${name}${state ? " &mdash; " + state : ""}</div>
-    <span class="pu-badge" style="background:${t.color}1a;color:${t.color};border:1px solid ${t.color}55">
+    <span class="pu-badge" style="background:${t.color}18;color:${t.color};border:1px solid ${t.color}40">
+      <span class="pu-badge-dot" style="background:${t.color}"></span>
       ${p.noise_tier_label || t.label}
     </span>
-    <div class="pu-row"><span class="pu-key">Noise level</span><span class="pu-val">${fmtDb(p.noise_db)}</span></div>
+    <div class="pu-meter">
+      <div class="pu-meter-label"><span>28 dB</span><span>${fmtDb(db)}</span><span>82 dB</span></div>
+      <div class="pu-meter-bg">
+        <div class="pu-meter-fill" style="width:${meterPct}%;background:${t.color}"></div>
+      </div>
+    </div>
     <div class="pu-row"><span class="pu-key">Dist. to highway</span><span class="pu-val">${p.dist_highway_m != null ? fmt(Math.round(p.dist_highway_m)) + " m" : "N/A"}</span></div>
-    <div class="pu-row"><span class="pu-key">Nearest AADT</span><span class="pu-val">${p.nearest_aadt != null ? fmt(Math.round(p.nearest_aadt)) : "N/A"}</span></div>
+    ${p.nearest_aadt != null ? `<div class="pu-row"><span class="pu-key">Nearest AADT</span><span class="pu-val">${fmt(Math.round(p.nearest_aadt))}</span></div>` : ""}
     ${p.pct_proficient_mean != null ? `<div class="pu-row"><span class="pu-key">% Proficient</span><span class="pu-val">${fmtPct(p.pct_proficient_mean)}</span></div>` : ""}
   `;
 }
@@ -419,10 +600,11 @@ function render(features) {
     maxClusterRadius: 45,
     iconCreateFunction(c) {
       const n = c.getChildCount();
-      const s = n > 1000 ? 42 : n > 100 ? 34 : 26;
+      const s = n > 1000 ? 44 : n > 100 ? 36 : 28;
       const label = n > 9999 ? Math.round(n/1000)+"k" : n;
+      const col = clusterColor(c);
       return L.divIcon({
-        html: `<div style="width:${s}px;height:${s}px;background:rgba(59,130,246,0.88);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,0.35)">${label}</div>`,
+        html: `<div style="width:${s}px;height:${s}px;background:${col}cc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;border:2px solid ${col};box-shadow:0 0 0 3px ${col}33">${label}</div>`,
         className: "",
         iconSize: [s, s],
       });
@@ -435,11 +617,12 @@ function render(features) {
     const m = L.circleMarker([lat, lng], {
       radius: 5,
       fillColor: t.color,
-      color: "rgba(0,0,0,0.35)",
+      color: "rgba(0,0,0,0.4)",
       weight: 0.5,
-      fillOpacity: 0.88,
+      fillOpacity: 0.9,
     });
-    m.bindPopup(popup(f.properties), { maxWidth: 260 });
+    m.noiseT = f.properties.noise_tier;
+    m.bindPopup(popup(f.properties), { maxWidth: 280 });
     cg.addLayer(m);
   });
 
@@ -465,16 +648,28 @@ function filter() {
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 function stats(features) {
-  const c = { total: features.length };
-  TIERS.forEach(t => c[t.id] = 0);
+  const c = { total: features.length, 1:0, 2:0, 3:0, 4:0 };
   features.forEach(f => { const ti = f.properties.noise_tier; if (c[ti] !== undefined) c[ti]++; });
   const highPct = c.total > 0 ? ((c[3]+c[4])/c.total*100).toFixed(1)+"%" : "&mdash;";
+
   document.getElementById("stats").innerHTML = `
     <div class="stat-card"><div class="stat-val">${fmt(c.total)}</div><div class="stat-lbl">Schools</div></div>
-    <div class="stat-card"><div class="stat-val">${highPct}</div><div class="stat-lbl">% High Noise</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:#e74c3c">${fmt(c[4])}</div><div class="stat-lbl">Tier 4 Severe</div></div>
-    <div class="stat-card"><div class="stat-val" style="color:#e67e22">${fmt(c[3])}</div><div class="stat-lbl">Tier 3 Significant</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:#f97316">${highPct}</div><div class="stat-lbl">% High Noise</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:#ef4444">${fmt(c[4])}</div><div class="stat-lbl">Tier 4 Severe</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:#f97316">${fmt(c[3])}</div><div class="stat-lbl">Tier 3 Significant</div></div>
   `;
+
+  if (c.total > 0) {
+    const bar = document.getElementById("tier-bar");
+    bar.innerHTML = TIERS.map(t => {
+      const w = (c[t.id] / c.total * 100).toFixed(2);
+      return `<div class="tier-bar-seg" style="width:${w}%;background:${t.color}"></div>`;
+    }).join("");
+    document.getElementById("tbl-t1").textContent = c[1] > 0 ? ((c[1]/c.total*100).toFixed(0)+"%") : "";
+    document.getElementById("tbl-t2").textContent = c[2] > 0 ? ((c[2]/c.total*100).toFixed(0)+"%") : "";
+    document.getElementById("tbl-t3").textContent = c[3] > 0 ? ((c[3]/c.total*100).toFixed(0)+"%") : "";
+    document.getElementById("tbl-t4").textContent = c[4] > 0 ? ((c[4]/c.total*100).toFixed(0)+"%") : "";
+  }
 }
 
 // ── Legend ────────────────────────────────────────────────────────────────────
@@ -513,81 +708,62 @@ function stateDropdown(features) {
   });
 }
 
+// ── Reset filters ─────────────────────────────────────────────────────────────
+document.getElementById("reset-btn").addEventListener("click", () => {
+  document.getElementById("f-state").value = "";
+  document.getElementById("f-mn").value = 0;
+  document.getElementById("f-mx").value = 2000;
+  document.getElementById("lbl-mn").textContent = "0 m";
+  document.getElementById("lbl-mx").textContent = "2000 m";
+  active = new Set([1,2,3,4]);
+  document.querySelectorAll(".legend-item").forEach(el => el.classList.remove("off"));
+  filter();
+});
+
 // ── Load data ─────────────────────────────────────────────────────────────────
 async function load() {
-  let geojson, isDemo = false;
-
   try {
-    document.getElementById("load-msg").textContent = "Fetching school noise database…";
+    document.getElementById("load-msg").textContent = "Fetching school noise database\u2026";
     const r = await fetch(GEOJSON_URL);
     if (!r.ok) throw new Error("HTTP " + r.status);
-    geojson = await r.json();
-    console.info("Real data loaded:", geojson.features.length, "schools");
+    const geojson = await r.json();
+    console.info("Data loaded:", geojson.features.length, "schools");
+    allFeatures = geojson.features;
   } catch (e) {
     console.warn("Real data not found, using demo dataset:", e.message);
-    document.getElementById("load-msg").textContent = "Generating demo dataset…";
-    geojson = demo(2000);
-    isDemo = true;
+    document.getElementById("load-msg").textContent = "Generating demo dataset\u2026";
+    allFeatures = demo(2000).features;
   }
 
-  allFeatures = geojson.features;
-
-  // Tier counts for legend
-  const counts = {};
-  TIERS.forEach(t => counts[t.id] = 0);
+  const counts = {1:0,2:0,3:0,4:0};
   allFeatures.forEach(f => { const ti = f.properties.noise_tier; if (counts[ti] !== undefined) counts[ti]++; });
 
   stateDropdown(allFeatures);
   legend(counts);
   filter();
 
-  // Update banner
-  const banner = document.getElementById("data-banner");
-  const bannerText = document.getElementById("banner-text");
-  if (isDemo) {
-    banner.className = "demo";
-    bannerText.innerHTML = `Demo mode &mdash; ${fmt(allFeatures.length)} synthetic schools. Run the Python pipeline and commit <code>docs/data/schools_webmap.geojson</code> to show real data.`;
-  } else {
-    banner.className = "real";
-    bannerText.textContent = `Real data \u2014 ${fmt(allFeatures.length).toLocaleString()} schools loaded from pipeline output.`;
-  }
-
   document.getElementById("loading").style.display = "none";
 }
 
 // ── Demo data ─────────────────────────────────────────────────────────────────
 function demo(n) {
-  // US highway corridors: simulate clustering near interstates
   const corridors = [
-    { lat:34.0, lng:-118.2 }, // LA
-    { lat:40.7, lng:-74.0  }, // NYC
-    { lat:41.8, lng:-87.6  }, // Chicago
-    { lat:29.7, lng:-95.4  }, // Houston
-    { lat:33.4, lng:-112.0 }, // Phoenix
-    { lat:32.8, lng:-96.8  }, // Dallas
-    { lat:37.8, lng:-122.4 }, // SF Bay
-    { lat:47.6, lng:-122.3 }, // Seattle
-    { lat:25.8, lng:-80.2  }, // Miami
-    { lat:39.9, lng:-75.2  }, // Philadelphia
-    { lat:38.9, lng:-77.0  }, // DC
-    { lat:42.4, lng:-71.1  }, // Boston
-    { lat:33.7, lng:-84.4  }, // Atlanta
-    { lat:44.9, lng:-93.2  }, // Minneapolis
-    { lat:39.1, lng:-84.5  }, // Cincinnati
+    { lat:34.0, lng:-118.2 }, { lat:40.7, lng:-74.0  }, { lat:41.8, lng:-87.6  },
+    { lat:29.7, lng:-95.4  }, { lat:33.4, lng:-112.0 }, { lat:32.8, lng:-96.8  },
+    { lat:37.8, lng:-122.4 }, { lat:47.6, lng:-122.3 }, { lat:25.8, lng:-80.2  },
+    { lat:39.9, lng:-75.2  }, { lat:38.9, lng:-77.0  }, { lat:42.4, lng:-71.1  },
+    { lat:33.7, lng:-84.4  }, { lat:44.9, lng:-93.2  }, { lat:39.1, lng:-84.5  },
   ];
   const states = ["CA","TX","FL","NY","IL","PA","OH","GA","NC","MI","NJ","VA","WA","AZ","MA","TN","IN","MO","MD","CO","WI","MN","OR","NV","KY"];
-
   const features = Array.from({ length: n }, (_, i) => {
     const corridor = corridors[Math.floor(Math.random() * corridors.length)];
-    const spread = Math.random() < 0.6 ? 0.5 : 2.5; // most schools near corridor, some far
+    const spread = Math.random() < 0.6 ? 0.5 : 2.5;
     const lat = corridor.lat + (Math.random() - 0.5) * spread;
     const lng = corridor.lng + (Math.random() - 0.5) * spread;
     const dist = Math.abs(Math.random() * 600 + (Math.random() < 0.3 ? 0 : 200));
-    const db_raw = 72 - dist * 0.055 + (Math.random() - 0.5) * 14;
-    const db = Math.min(82, Math.max(28, db_raw));
+    const db = Math.min(82, Math.max(28, 72 - dist * 0.055 + (Math.random() - 0.5) * 14));
     const tier = db < 50 ? 1 : db < 55 ? 2 : db < 65 ? 3 : 4;
     const state = states[Math.floor(Math.random() * states.length)];
-    const baseProficiency = 65 - (tier - 1) * 8;
     return {
       type: "Feature",
       geometry: { type: "Point", coordinates: [lng, lat] },
@@ -599,7 +775,7 @@ function demo(n) {
         nearest_aadt: Math.round(8000 + Math.random() * 92000),
         STABR: state,
         NAME: `Demo Elementary #${i + 1}`,
-        pct_proficient_mean: +(baseProficiency + (Math.random() - 0.5) * 20).toFixed(1),
+        pct_proficient_mean: +((65 - (tier-1)*8) + (Math.random()-0.5)*20).toFixed(1),
       },
     };
   });
@@ -608,7 +784,6 @@ function demo(n) {
 
 // ── Events ────────────────────────────────────────────────────────────────────
 document.getElementById("f-state").addEventListener("change", filter);
-
 document.getElementById("f-mn").addEventListener("input", function() {
   document.getElementById("lbl-mn").textContent = this.value + " m";
   filter();
