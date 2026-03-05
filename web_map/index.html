@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>US School Noise Exposure Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:#0f172a; color:#e2e8f0; height:100vh; display:flex; flex-direction:column; }
+    header { background:#1e293b; padding:12px 20px; border-bottom:2px solid #334155; display:flex; align-items:center; gap:16px; flex-shrink:0; z-index:1000; }
+    header h1 { font-size:1.1rem; font-weight:700; color:#f1f5f9; }
+    header p { font-size:0.78rem; color:#94a3b8; }
+    .layout { display:flex; flex:1; overflow:hidden; }
+    #sidebar { width:300px; background:#1e293b; border-right:1px solid #334155; overflow-y:auto; flex-shrink:0; padding:16px; }
+    .panel-section { margin-bottom:20px; }
+    .panel-section h3 { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:#64748b; margin-bottom:10px; }
+    .legend-item { display:flex; align-items:center; gap:10px; margin-bottom:8px; cursor:pointer; padding:6px 8px; border-radius:6px; transition:background 0.15s; }
+    .legend-item:hover { background:#263347; }
+    .legend-item.inactive { opacity:0.35; }
+    .legend-dot { width:14px; height:14px; border-radius:50%; flex-shrink:0; border:2px solid rgba(255,255,255,0.2); }
+    .legend-label { font-size:0.82rem; }
+    .legend-count { margin-left:auto; font-size:0.75rem; color:#94a3b8; background:#0f172a; padding:2px 6px; border-radius:10px; }
+    .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .stat-card { background:#0f172a; border-radius:8px; padding:10px; text-align:center; }
+    .stat-value { font-size:1.4rem; font-weight:700; color:#f8fafc; }
+    .stat-label { font-size:0.7rem; color:#64748b; margin-top:2px; }
+    select, input[type=range] { width:100%; background:#0f172a; color:#e2e8f0; border:1px solid #334155; border-radius:6px; padding:6px 8px; font-size:0.82rem; margin-top:6px; }
+    label { font-size:0.82rem; color:#94a3b8; display:block; margin-top:10px; }
+    #map { flex:1; background:#0f172a; }
+    .leaflet-popup-content-wrapper { background:#1e293b; color:#e2e8f0; border-radius:10px; border:1px solid #334155; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+    .leaflet-popup-tip { background:#1e293b; }
+    .popup-header { font-weight:700; font-size:0.9rem; margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #334155; }
+    .popup-row { display:flex; justify-content:space-between; font-size:0.8rem; margin:4px 0; gap:16px; }
+    .popup-key { color:#94a3b8; }
+    .popup-val { font-weight:600; text-align:right; }
+    .tier-badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700; margin-top:6px; }
+    #loading { position:absolute; inset:0; background:#0f172a; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9999; }
+    #loading h2 { font-size:1.2rem; margin-bottom:8px; }
+    #loading p { color:#64748b; font-size:0.85rem; }
+    .spinner { width:40px; height:40px; border:4px solid #334155; border-top-color:#3b82f6; border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:16px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    #demo-banner { background:#1d4ed8; text-align:center; padding:8px; font-size:0.8rem; flex-shrink:0; }
+    #demo-banner a { color:#bfdbfe; }
+    .who-ref { font-size:0.78rem; color:#94a3b8; line-height:1.7; }
+  </style>
+</head>
+<body>
+
+<div id="demo-banner">
+  Demo mode: showing synthetic sample data. Run the Python pipeline and replace
+  <code>outputs/data/schools_webmap.geojson</code> with real output. See README for instructions.
+</div>
+
+<header>
+  <div>
+    <h1>US Elementary Schools &mdash; Highway Noise Exposure</h1>
+    <p>WHO cognitive impact thresholds &bull; BTS National Transportation Noise Map &bull; NCES EDGE Schools</p>
+  </div>
+</header>
+
+<div class="layout">
+  <div id="sidebar">
+    <div class="panel-section">
+      <h3>Noise Exposure Tiers</h3>
+      <div id="legend"></div>
+    </div>
+    <div class="panel-section">
+      <h3>Summary Statistics</h3>
+      <div class="stat-grid" id="stats"></div>
+    </div>
+    <div class="panel-section">
+      <h3>Filters</h3>
+      <label>State</label>
+      <select id="state-filter">
+        <option value="">All States</option>
+      </select>
+      <label>Min Highway Distance (m): <span id="dist-label">0</span></label>
+      <input type="range" id="dist-filter" min="0" max="500" step="50" value="0" />
+      <label>Max Highway Distance (m): <span id="maxdist-label">2000</span></label>
+      <input type="range" id="maxdist-filter" min="50" max="2000" step="50" value="2000" />
+    </div>
+    <div class="panel-section">
+      <h3>WHO Reference Thresholds</h3>
+      <div class="who-ref">
+        <div>&#8226; <b style="color:#2ecc71">Below 50 dB</b> &mdash; Minimal risk</div>
+        <div>&#8226; <b style="color:#f1c40f">50&ndash;55 dB</b> &mdash; Elevated risk</div>
+        <div>&#8226; <b style="color:#e67e22">55&ndash;65 dB</b> &mdash; Significant cognitive impact</div>
+        <div>&#8226; <b style="color:#e74c3c">Above 65 dB</b> &mdash; Severe exposure</div>
+        <div style="margin-top:8px">Source: WHO Environmental Noise Guidelines for the European Region (2018)</div>
+      </div>
+    </div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <h2>Loading School Data&hellip;</h2>
+  <p>Processing geospatial data for ~67,000 schools</p>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const TIERS = [
+  { id:1, label:"Tier 1 \u2014 Minimal Risk",      color:"#2ecc71" },
+  { id:2, label:"Tier 2 \u2014 Elevated Risk",      color:"#f1c40f" },
+  { id:3, label:"Tier 3 \u2014 Significant Impact", color:"#e67e22" },
+  { id:4, label:"Tier 4 \u2014 Severe Exposure",    color:"#e74c3c" },
+];
+const TIER_MAP = {};
+TIERS.forEach(t => TIER_MAP[t.id] = t);
+
+const map = L.map("map", { center:[39.5,-98.35], zoom:4 });
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  attribution:"&copy; OpenStreetMap contributors &copy; CARTO",
+  subdomains:"abcd", maxZoom:19,
+}).addTo(map);
+
+let allFeatures = [], activeTiers = new Set([1,2,3,4]), currentLayer = null;
+
+function fmt(n) { return (n==null||isNaN(n)) ? "N/A" : Number(n).toLocaleString(); }
+
+function buildPopup(p) {
+  const t = TIER_MAP[p.noise_tier] || {};
+  const name = p.SCHNAM || p.NAME || p.name || "School";
+  const state = p.STABR || p.ST || p.STATE_ABBR || "";
+  return `<div class="popup-header">${name}${state?" &mdash; "+state:""}</div>
+    <span class="tier-badge" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}44">${p.noise_tier_label||t.label||""}</span>
+    <div style="margin-top:10px">
+      <div class="popup-row"><span class="popup-key">Noise Level</span><span class="popup-val">${p.noise_db!=null?Number(p.noise_db).toFixed(1)+" dB":"N/A"}</span></div>
+      <div class="popup-row"><span class="popup-key">Dist. to Highway</span><span class="popup-val">${p.dist_highway_m!=null?fmt(Math.round(p.dist_highway_m))+" m":"N/A"}</span></div>
+      <div class="popup-row"><span class="popup-key">Nearest AADT</span><span class="popup-val">${p.nearest_aadt!=null?fmt(Math.round(p.nearest_aadt)):"N/A"}</span></div>
+      ${p.pct_proficient_mean!=null?`<div class="popup-row"><span class="popup-key">% Proficient</span><span class="popup-val">${Number(p.pct_proficient_mean).toFixed(1)}%</span></div>`:""}
+    </div>`;
+}
+
+function applyFilters() {
+  const sv = document.getElementById("state-filter").value;
+  const mn = +document.getElementById("dist-filter").value;
+  const mx = +document.getElementById("maxdist-filter").value;
+  const filtered = allFeatures.filter(f => {
+    const p = f.properties;
+    if (!activeTiers.has(p.noise_tier)) return false;
+    if (sv && p.STABR!==sv && p.ST!==sv && p.STATE_ABBR!==sv) return false;
+    if (p.dist_highway_m!=null && (p.dist_highway_m<mn || p.dist_highway_m>mx)) return false;
+    return true;
+  });
+  renderLayer(filtered);
+}
+
+function renderLayer(features) {
+  if (currentLayer) map.removeLayer(currentLayer);
+  const cg = L.markerClusterGroup({
+    chunkedLoading:true, maxClusterRadius:50,
+    iconCreateFunction(c) {
+      const n=c.getChildCount(), s=n>1000?44:n>100?36:28;
+      return L.divIcon({html:`<div style="background:rgba(59,130,246,0.85);width:${s}px;height:${s}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,0.3)">${n>999?Math.round(n/1000)+"k":n}</div>`,className:"",iconSize:[s,s]});
+    }
+  });
+  features.forEach(f => {
+    const [lng,lat] = f.geometry.coordinates;
+    const t = TIER_MAP[f.properties.noise_tier]||TIER_MAP[1];
+    const circle = L.circleMarker([lat,lng],{radius:5,fillColor:t.color,color:"rgba(0,0,0,0.4)",weight:0.5,fillOpacity:0.85});
+    circle.bindPopup(buildPopup(f.properties),{maxWidth:280});
+    cg.addLayer(circle);
+  });
+  map.addLayer(cg);
+  currentLayer = cg;
+  updateStats(features);
+}
+
+function updateStats(features) {
+  const c={total:features.length};
+  TIERS.forEach(t=>c[t.id]=0);
+  features.forEach(f=>{const ti=f.properties.noise_tier;if(c[ti]!==undefined)c[ti]++;});
+  document.getElementById("stats").innerHTML=`
+    <div class="stat-card"><div class="stat-value">${fmt(c.total)}</div><div class="stat-label">Schools Shown</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#e74c3c">${fmt(c[4])}</div><div class="stat-label">Tier 4 Severe</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#e67e22">${fmt(c[3])}</div><div class="stat-label">Tier 3 Significant</div></div>
+    <div class="stat-card"><div class="stat-value">${c.total>0?((c[3]+c[4])/c.total*100).toFixed(1)+"%":"&mdash;"}</div><div class="stat-label">% High Noise</div></div>`;
+}
+
+function buildLegend(counts) {
+  document.getElementById("legend").innerHTML="";
+  TIERS.forEach(t=>{
+    const item=document.createElement("div");
+    item.className="legend-item"+(activeTiers.has(t.id)?"":" inactive");
+    item.innerHTML=`<div class="legend-dot" style="background:${t.color}"></div><span class="legend-label">${t.label}</span><span class="legend-count">${fmt(counts[t.id]||0)}</span>`;
+    item.addEventListener("click",()=>{
+      activeTiers.has(t.id)?activeTiers.delete(t.id):activeTiers.add(t.id);
+      item.classList.toggle("inactive");
+      applyFilters();
+    });
+    document.getElementById("legend").appendChild(item);
+  });
+}
+
+function populateStateFilter(features) {
+  const states=new Set();
+  features.forEach(f=>{const s=f.properties.STABR||f.properties.ST||f.properties.STATE_ABBR;if(s)states.add(s);});
+  const sel=document.getElementById("state-filter");
+  [...states].sort().forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;sel.appendChild(o);});
+}
+
+async function loadData() {
+  let geojson;
+  try {
+    const r=await fetch("../outputs/data/schools_webmap.geojson");
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    geojson=await r.json();
+  } catch(e) {
+    console.warn("Using demo data:",e.message);
+    geojson=generateDemo(2000);
+  }
+  allFeatures=geojson.features;
+  const counts={};
+  TIERS.forEach(t=>counts[t.id]=0);
+  allFeatures.forEach(f=>{const ti=f.properties.noise_tier;if(counts[ti]!==undefined)counts[ti]++;});
+  populateStateFilter(allFeatures);
+  buildLegend(counts);
+  applyFilters();
+  document.getElementById("loading").style.display="none";
+}
+
+function generateDemo(n) {
+  const states=["CA","TX","FL","NY","IL","PA","OH","GA","NC","MI","NJ","VA","WA","AZ","MA","TN","IN","MO","MD","CO"];
+  const features=[];
+  for(let i=0;i<n;i++){
+    const lat=25+Math.random()*24, lng=-125+Math.random()*60;
+    const dist=Math.random()*800;
+    const db=Math.min(80,Math.max(30,75-dist*0.06+(Math.random()-0.5)*12));
+    const tier=db<50?1:db<55?2:db<65?3:4;
+    const state=states[Math.floor(Math.random()*states.length)];
+    features.push({type:"Feature",geometry:{type:"Point",coordinates:[lng,lat]},properties:{
+      noise_db:+db.toFixed(1),noise_tier:tier,noise_tier_label:TIER_MAP[tier].label,
+      dist_highway_m:+dist.toFixed(0),nearest_aadt:Math.round(5000+Math.random()*95000),
+      STABR:state,NAME:"Demo Elementary #"+(i+1),
+      pct_proficient_mean:+(50-tier*5+Math.random()*20).toFixed(1)
+    }});
+  }
+  return {type:"FeatureCollection",features};
+}
+
+document.getElementById("state-filter").addEventListener("change",applyFilters);
+document.getElementById("dist-filter").addEventListener("input",function(){document.getElementById("dist-label").textContent=this.value;applyFilters();});
+document.getElementById("maxdist-filter").addEventListener("input",function(){document.getElementById("maxdist-label").textContent=this.value;applyFilters();});
+
+loadData();
+</script>
+</body>
+</html>
